@@ -1,0 +1,358 @@
+type: edu
+custom_name: stage5
+files:
+- name: src/converter/Main.java
+  visible: true
+  text: |
+    package converter;
+
+    public class Main {
+        public static void main(String[] args) {
+            System.out.println("Hello, world!");
+        }
+    }
+  learner_created: false
+- name: test/ConverterTest.java
+  visible: false
+  text: |
+    import converter.Main;
+    import org.hyperskill.hstest.stage.StageTest;
+    import org.hyperskill.hstest.testcase.CheckResult;
+    import org.hyperskill.hstest.testcase.TestCase;
+
+    import java.util.List;
+
+    class Clue {
+        final String input;
+        String answer;
+        final boolean provideAnswer;
+
+        Clue(final String input, final String answer, final boolean provideAnswer) {
+            this.input = input;
+            this.answer = answer;
+            this.provideAnswer = provideAnswer;
+        }
+
+        Clue(final String input, final String answer) {
+            this(input, answer, false);
+        }
+
+        Clue(final String input) {
+            this(input, null, false);
+        }
+    }
+
+
+    public class ConverterTest extends StageTest<Clue> {
+
+        public ConverterTest() {
+            super(Main.class);
+        }
+
+        static TestCase<Clue> testToAnswer(final String input, final String answer, final boolean provideAnswer) {
+            return new TestCase<Clue>()
+                .setAttach(new Clue(input, answer, provideAnswer))
+                .setInput(input);
+        }
+
+        @Override
+        public List<TestCase<Clue>> generate() {
+            return List.of(
+                /* Tests with a hint: */
+                testToAnswer("10\n0.234\n7", "0.14315", true),
+                testToAnswer("10\n10.234\n7", "13.14315", true),
+                testToAnswer("6\n2\n1", "11", true),
+                testToAnswer("35\naf.xy\n17", "148.g88a8", true),
+                testToAnswer("10\n11\n2", "1011", true),
+                testToAnswer("16\naaaaa.0\n24", "22df2.00000", true),
+                testToAnswer("16\n0.cdefb\n24", "0.j78da", true),
+                testToAnswer("16\naaaaa.cdefb\n24", "22df2.j78da", true),
+
+                /* Tests without a hint: */
+                testToAnswer("10\n0.2340\n7", "0.14315", false),
+                testToAnswer("10\n10.2340\n7", "13.14315", false),
+                testToAnswer("6\n2\n1", "11", false),
+                testToAnswer("35\naf.xy0\n17", "148.g88a8", false),
+                testToAnswer("10\n12\n2", "1100", false),
+                testToAnswer("16\naaaaa.00\n24", "22df2.00000", false),
+                testToAnswer("16\n0.cdefb0\n24", "0.j78da", false),
+                testToAnswer("16\naaaaa.cdefb0\n24", "22df2.j78da", false),
+
+                /* Tests from previous stage (with a hint): */
+                testToAnswer("10\n11\n2\n", "1011", true),
+                testToAnswer("1\n11111\n10\n", "5", true),
+                testToAnswer("10\n1000\n36\n", "rs", true),
+                testToAnswer("21\n4242\n6\n", "451552", true),
+                testToAnswer("7\n12\n11\n", "9", true),
+                testToAnswer("5\n300\n10\n", "75", true),
+                testToAnswer("1\n11111\n5\n", "10", true),
+                testToAnswer("10\n4\n1\n", "1111", true),
+
+                /* Tests from previous stage (without a hint): */
+                testToAnswer("10\n12\n2\n", "1100", false),
+                testToAnswer("1\n1111111\n10\n", "7", false),
+                testToAnswer("10\n1001\n36\n", "rt", false),
+                testToAnswer("21\n4243\n6\n", "451553", false),
+                testToAnswer("7\n13\n11\n", "a", false),
+                testToAnswer("5\n301\n10\n", "76", false),
+                testToAnswer("1\n111111\n5\n", "11", false),
+                testToAnswer("10\n5\n1\n", "11111", false)
+            );
+        }
+
+        @Override
+        public CheckResult check(String reply, Clue clue) {
+            final String[] lines = reply
+                .lines()
+                .filter(line -> !line.isEmpty())
+                .toArray(String[]::new);
+
+            if (lines.length == 0) {
+                return new CheckResult(
+                    false,
+                    "Your program doesn't print any line."
+                );
+            }
+
+            String answer = lines[lines.length - 1];
+            answer = answer.replaceAll("[^\\p{Graph}]", "");
+            clue.answer = clue.answer.replaceAll("[^\\p{Graph}]", "");
+
+            answer = removeEndZeros(answer);
+            clue.answer = removeEndZeros(clue.answer);
+
+            if (!answer.equals(clue.answer)) {
+                if (clue.provideAnswer) {
+                    return new CheckResult(
+                        false,
+                        "Your answer is wrong.\n" +
+                            "This is a sample test so we give you a hint.\n" +
+                            "Input: " + clue.input + "\n" +
+                            "Your answer: " + answer + "\n" +
+                            "Correct answer: " + clue.answer
+                    );
+                } else {
+                    return new CheckResult(
+                        false,
+                        "Your answer is wrong."
+                    );
+                }
+            }
+
+            return new CheckResult(true);
+        }
+
+        private String removeEndZeros(String number) {
+            if (!number.contains(".")) {
+                return number;
+            }
+            while (number.endsWith("0")) {
+                number = number.substring(0, number.length() - 1);
+            }
+            if (number.endsWith(".")) {
+                number = number.substring(0, number.length() - 1);
+            }
+            return number;
+        }
+    }
+  learner_created: false
+- name: src/converter/BinaryNumber.java
+  visible: true
+  text: |
+    package converter;
+
+    public class BinaryNumber extends MyNumbers {
+
+        public BinaryNumber(double number) {
+            super(number, 2);
+        }
+
+        public BinaryNumber(String strNum) {
+            super(strNum, 2);
+        }
+
+        @Override
+        protected String getAsString(int precision) {
+            //Overridden just to add 0b at the beginning
+            if (getAsNumber() >= 0) {
+                return "0b" + int2String((int) getAsNumber()) + "." + fraction2string(getAsNumber() % 1, precision);
+            } else {
+                return "-0b" + int2String((-1) * (int) getAsNumber()) + "." + fraction2string((-1) * getAsNumber() % 1, precision);
+            }
+        }
+
+        @Override
+        protected String getAsString() {
+            //The no arguments version returns an integer string i.e. no fractional characters and no dot
+            if (getAsNumber() >= 0) {
+                return "0b" + int2String((int) getAsNumber());
+            } else {
+                return "-0b" + int2String((-1) * (int) getAsNumber());
+            }
+        }
+    }
+  learner_created: true
+- name: src/converter/MyNumbers.java
+  visible: true
+  text: |
+    package converter;
+
+    public class MyNumbers {
+        private double number;
+        private final int base;
+
+        public MyNumbers(double number, int base) {
+            this.number = number;
+            this.base = base;
+        }
+        public MyNumbers(String numStr, int base) {
+            this.base = base;
+            this.number = string2double(numStr);
+        }
+
+        public double getAsNumber() {
+            return number;
+        }
+
+
+        protected String getAsString(int precision) {
+            if (number >= 0) {
+                return int2String((int) number) + "." + fraction2string(number % 1, precision);
+            } else {
+                return "-" + int2String((-1) * (int) number) + "." + fraction2string((-1) * number % 1, precision);
+            }
+        }
+        protected String getAsString() {
+            //The no arguments version returns an integer string i.e. no fractional characters and no dot
+            if (number >= 0) {
+                return int2String((int) number);
+            } else {
+                return "-" + int2String((-1) * (int) number);
+            }
+        }
+
+        protected int string2int(String i) {
+            /**
+             Converts a string to integer value
+             */
+            if (i == null) {
+                System.out.println("Error, trying to convert null string to int");
+                return 0;
+            } else if (i.length() == 0) {
+                System.out.println("Error, trying to convert string with 0 length");
+                return 0;
+            } else if (i.length() == 1) return char2int(i.charAt(0));
+            else return base * string2int(i.substring(0, i.length() - 1)) + char2int(i.charAt(i.length() - 1));
+        }
+
+        private double str2frac(String fracStr) {
+            if (fracStr == null) {
+                System.out.println("Error, trying to convert null string to fractional part of a number.");
+                return 0.0;
+            } else if (fracStr.length() == 0) {
+                System.out.println("Error, trying to convert zero length string to fractional part of a number.");
+                return 0;
+            } else {
+                int d = 1;
+                for (int i = 1; i < fracStr.length() + 1; i++) {
+                    d = d * base;
+                }
+                return string2int(fracStr) / (double) d;
+            }
+        }
+
+        protected double string2double(String numStr) {
+            if (numStr == null) {
+                System.out.println("Error, trying to convert null string");
+                return 0.0;
+            } else if (numStr.length() == 0) {
+                System.out.println("Warning, trying to convert string with zero length");
+                return 0.0;
+            } else if (numStr.charAt(0) == '-') {
+                return -1.0 * string2double(numStr.substring(1));
+            } else if (numStr.length() == 1) {
+                return char2int(numStr.charAt(0));
+            } else if (numStr.charAt(0) == '.') {
+                return str2frac(numStr.substring(1));
+            } else {
+                String[] s = numStr.split("\\.", 2);
+                if (s.length == 1) {
+                    //No fractional part
+                    return string2int(s[0]);
+                } else {
+                    return string2int(s[0] ) +  str2frac(s[1]) ;
+                }
+            }
+
+
+        }
+
+
+
+        private int char2int(char c){
+            int i = (int) c;
+            if (i < 0) {
+                System.out.println("Error atempt to convert integer < 0 to character");
+                i = 0;
+            } else if (48 <= i && i <= 57) {
+                i = i - 48; //Digit 0-9
+            } else if (64 < i && i < 91) {
+                i = i - 55; // Capital letter A-Z
+            } else {
+                System.out.println("Illegal character encountered");
+                i = 0;
+            }
+            if (i >= base) {
+                System.out.println("Illegal character encountered");
+                return 0;
+            } else {
+                return i;
+            }
+        }
+
+        protected static char num2char(int number) {
+            /**
+             * Convert integer number to a single character
+             */
+            if (number < 0) {
+                System.out.println("Error, trying to convert negative number to character");
+                return '#';
+            } else if (number <= 9) {
+                return (char) (number + 48);
+            } else if (number <= 35 ) {
+                return (char) (number + 55);
+            } else {
+                System.out.println("Error converting numeric to character!");
+                return '"';
+            }
+        }
+        protected String int2String(int number) {
+            /**
+             * Converts integer number to a string of characters
+             */
+            int i = number / base;
+            int rem = number % base;
+            if (i <= 0) {
+                return String.valueOf(num2char(rem));
+            } else {
+                return int2String(i) + num2char(rem);
+            }
+
+        }
+        protected String fraction2string(double frac, int precision) {
+            /**
+             * Converts the fractional part of a number to a string.  frac must be greater than or equal to 0 and less than 1
+             */
+            for (int i = 1; i <= precision; i++) {
+                frac = frac * base;
+            }
+            return int2String((int) (frac + 0.5));
+        }
+    }
+  learner_created: true
+feedback_link: https://hyperskill.org/projects/41/stages/218/implement#comment
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Wed, 30 Dec 2020 13:26:38 UTC
+record: 5
